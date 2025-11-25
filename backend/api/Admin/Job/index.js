@@ -1,7 +1,7 @@
-import express from 'express';
-import validator from './validator.js';
-import controller from './controller.js';
-import auth from '../../../middleware/auth.js';
+import express from "express";
+import validator from "./validator.js";
+import controller from "./controller.js";
+import auth from "../../../middleware/auth.js";
 const router = express.Router();
 
 /**
@@ -68,7 +68,12 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/createjob',auth, validator.validateCreateJob, controller.createJob);
+router.post(
+  "/createjob",
+  auth,
+  validator.validateCreateJob,
+  controller.createJob
+);
 /**
  * @swagger
  * /api/admin/job/updatejob/{id}:
@@ -126,7 +131,7 @@ router.post('/createjob',auth, validator.validateCreateJob, controller.createJob
  *       500:
  *         description: Internal server error
  */
-router.put('/updatejob/:id',auth, controller.updateJob);
+router.put("/updatejob/:id", auth, controller.updateJob);
 /**
  * @swagger
  * /api/admin/job/deletejob/{id}:
@@ -161,7 +166,7 @@ router.put('/updatejob/:id',auth, controller.updateJob);
  *       500:
  *         description: Internal server error
  */
-router.delete('/deletejob/:id',auth, controller.deleteJob);
+router.delete("/deletejob/:id", auth, controller.deleteJob);
 
 /**
  * @swagger
@@ -223,7 +228,7 @@ router.delete('/deletejob/:id',auth, controller.deleteJob);
  *       500:
  *         description: Internal server error
  */
-router.get("/",auth,controller.getAllJobs)
+router.get("/", auth, controller.getAllJobs);
 
 /**
  * @swagger
@@ -275,6 +280,6 @@ router.get("/",auth,controller.getAllJobs)
  *       500:
  *         description: Internal server error
  */
-router.get("/:siteId",auth, controller.getJobsBySite);
+router.get("/:siteId", auth, controller.getJobsBySite);
 
 export default router;
