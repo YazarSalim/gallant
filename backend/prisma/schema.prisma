@@ -1,0 +1,129 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String
+  email     String   @unique
+  password  String
+  resetToken  String?  // nullable
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id         Int      @id @default(autoincrement())
+  clientCode String   @unique
+  clientName String   @unique
+  contact    String
+  isDeleted  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+
+  sites        Site[]
+  jobs         Job[]
+  kpiValues    KpiValue[]
+  kpiEntryLogs KpiEntryLog[]
+}
+
+model Site {
+  id        Int      @id @default(autoincrement())
+  siteCode  String   @unique
+  siteName  String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  clientId     Int
+  client       Client        @relation(fields: [clientId], references: [id])
+  jobs         Job[]
+  kpiValues    KpiValue[]
+  kpiEntryLogs KpiEntryLog[]
+}
+
+model Job {
+  id        Int      @id @default(autoincrement())
+  jobCode   String   @unique
+  jobName   String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  clientId Int
+  client   Client @relation(fields: [clientId], references: [id])
+
+  siteId       Int
+  site         Site          @relation(fields: [siteId], references: [id])
+  kpiValues    KpiValue[]
+  kpiEntryLogs KpiEntryLog[]
+}
+
+model Kpi {
+  id        Int        @id @default(autoincrement())
+  name      String
+  code      String?    @unique
+  isDeleted Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  kpiValues KpiValue[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String?
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  kpiValues KpiValue[]
+}
+
+model KpiValue {
+  id Int @id @default(autoincrement())
+
+  clientId   Int
+  siteId     Int
+  jobId      Int
+  kpiId      Int
+  categoryId Int
+
+  value     Float?   @default(0)
+  entryDate DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client   Client   @relation(fields: [clientId], references: [id])
+  site     Site     @relation(fields: [siteId], references: [id])
+  job      Job      @relation(fields: [jobId], references: [id])
+  kpi      Kpi      @relation(fields: [kpiId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@unique([clientId, siteId, jobId, kpiId, categoryId, entryDate])
+}
+
+model KpiEntryLog {
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  siteId    Int
+  jobId     Int
+  isDeleted Boolean    @default(false)
+  entryDate DateTime
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+  site   Site   @relation(fields: [siteId], references: [id])
+  job    Job    @relation(fields: [jobId], references: [id])
+
+  @@unique([clientId, siteId, jobId, entryDate])
+}
