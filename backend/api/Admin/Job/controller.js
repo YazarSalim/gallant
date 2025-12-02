@@ -2,41 +2,70 @@ import service from "./service.js";
 
 const createJob = async (req, res) => {
   try {
-    const data = await service.createJobService(req.body);
-    res.json({ success: true, data, message: "New Job Created Successfully" });
+    const newJob = await service.createJobService(req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: "New job created successfully",
+      data: newJob,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
+
+
 const updateJob = async (req, res) => {
   try {
-    console.log(req.body);
-    
-    const id = req.params.id;
-    const data = await service.updatejobService(id, req.body);
-    res.json({ success: true, data, message: " Job Updated Successfully" });
+    const { id } = req.params;
+    const updatedJob = await service.updateJobService(id, req.body);
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Job updated successfully",
+      data: updatedJob,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
+
+
+
 const deleteJob = async (req, res) => {
   try {
-    const id = req.params.id;
-    const data = await service.deleteJobService(id);
-    res.json({ success: true, data, message: "Job Deleted Successfully" });
+    const { id } = req.params;
+    const deletedJob = await service.deleteJobService(id);
+
+
+    return res.status(200).json({
+      success: true,
+      message: "Job deleted successfully",
+      data: deletedJob,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
 
 const getAllJobs = async (req, res) => {
   try {
-    const { page, limit,search } = req.query;
+    const { page, limit, search } = req.query;
     const result = await service.getAllJobsService({
       page: Number(page) || 1,
       limit: Number(limit) || 10,
-      search:search || ""
+      search: search || "",
     });
 
     res.status(200).json({
@@ -53,15 +82,50 @@ const getAllJobs = async (req, res) => {
   }
 };
 
- const getJobsBySite = async (req, res) => {
+const getJobsBySite = async (req, res) => {
   try {
     const { siteId } = req.params;
-    const data = await service.getJobsBySiteService(siteId);
-    res.json({success:true,data});
+    const jobs = await service.getJobsBySiteService(siteId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Jobs fetched successfully",
+      data: jobs?jobs: [],
+    });
   } catch (error) {
-    res.json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
-}
+};
 
 
-export default {createJob,updateJob,deleteJob,getAllJobs,getJobsBySite}
+const getJobById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const job = await service.getJobByIdService(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Job fetched successfully",
+      data: job,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+
+
+export default {
+  createJob,
+  updateJob,
+  deleteJob,
+  getAllJobs,
+  getJobsBySite,
+  getJobById,
+};

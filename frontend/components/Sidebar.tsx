@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import gallant from "../public/gallant.svg"
-import logo from "../public/logo.svg"
-import logout from "../public/logout.svg"
+import gallant from "../public/gallant.svg";
+import logo from "../public/logo.svg";
+import logout from "../public/logout.svg";
 import { useRouter } from "next/navigation";
 
 interface NavItem {
@@ -20,13 +20,32 @@ interface SidebarProps {
 
 export default function Sidebar({ items }: SidebarProps) {
   const [expanded, setExpanded] = useState(false);
-const router =useRouter();
+  const [role,setRole]=useState()
+  const router = useRouter();
 
-  const handleLogout=()=>{
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    router.push("/login")
-  }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+
+  useEffect(()=>{
+    const storedUser = localStorage.getItem("user");
+    if(storedUser){
+      try {
+          const parsedUser = JSON.parse(storedUser);
+          setRole(parsedUser.role)
+      } catch (error) {
+        console.error(error);
+        
+      }
+    }
+  },[])
+
+  const menus = items[role?role :'']
+  
+  
 
   return (
     <div
@@ -39,12 +58,16 @@ const router =useRouter();
       {/* Logo */}
       <div className="p-5 flex items-center gap-3 border-b border-white/20">
         {/* <div className="w-10 h-10 bgrounded-lg" /> */}
-        {expanded ? <Image src={gallant} alt={gallant}  />:<Image src={logo} alt={logo}  />}
+        {expanded ? (
+          <Image src={gallant} alt={gallant} />
+        ) : (
+          <Image src={logo} alt={logo} />
+        )}
       </div>
 
       {/* Navigation Items */}
       <nav className="flex-1 mt-4 flex flex-col gap-2">
-        {items.map((item) => (
+        {menus?.map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -60,9 +83,13 @@ const router =useRouter();
       </nav>
 
       <div className="flex justify-center p-3">
-        {expanded? <button onClick={handleLogout}>Logout</button> :<button onClick={handleLogout}>
-          <Image src={logout} alt={logout}/>
-        </button>}
+        {expanded ? (
+          <button onClick={handleLogout}>Logout</button>
+        ) : (
+          <button onClick={handleLogout}>
+            <Image src={logout} alt={logout} />
+          </button>
+        )}
       </div>
     </div>
   );

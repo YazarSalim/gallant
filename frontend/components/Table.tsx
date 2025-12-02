@@ -15,18 +15,18 @@ interface TableProps<T> {
 export default function Table<T>({ columns, data, actions }: TableProps<T>) {
   return (
     <table className="min-w-full border border-gray-200 rounded-lg overflow-hidden">
-      <thead className="bg-gray-100">
+      <thead className="">
         <tr>
           {columns.map((col) => (
             <th
               key={col.key}
-              className="px-4 py-2 text-left text-gray-700 font-medium uppercase tracking-wider"
+              className="px-4 py-2 text-left text-gray-700 font-bold uppercase text-[17px] tracking-wider"
             >
               {col.label}
             </th>
           ))}
           {actions && (
-            <th className="px-4 py-2 text-left text-gray-700 font-medium uppercase tracking-wider">
+            <th className="px-4 py-2 text-left text-gray-700 font-bold uppercase text-[17px] tracking-wider">
               Actions
             </th>
           )}
@@ -43,12 +43,12 @@ export default function Table<T>({ columns, data, actions }: TableProps<T>) {
           data.map((row, idx) => (
             <tr key={idx} className="hover:bg-gray-50 transition-colors duration-150">
               {columns.map((col) => (
-                <td key={col.key} className="px-4 py-2">
+                <td key={col.key} className="px-4 py-2 text-[15px]  font-semibold">
                   {/* @ts-ignore */}
                   {row[col.key]}
                 </td>
               ))}
-              {actions && <td className="px-4 py-2 ">{actions(row)}</td>}
+              {actions && <td className="px-4 py-2  ">{actions(row)}</td>}
             </tr>
           ))
         )}

@@ -19,3 +19,11 @@ export interface Site {
   clientName: string;
   clientId: string;
 }
+
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  phone: string;
+}

@@ -33,7 +33,7 @@ export default function Pagination({
       </button>
 
       {/* Page Numbers */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap max-w-3xl justify-end">
         {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
           <button
             key={p}

@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import api from "@/hooks/useAxios";
 import toast from "react-hot-toast";
 import { createSite, updateSite } from "@/services/siteServices/site";
 import { Client } from "@/types/types";
 import Input from "./Input";
+import { fetchAllClientsForForm } from "@/services/clientServices.ts/client";
 
 const siteSchema = z.object({
   siteName: z.string().min(1, "Site name is required"),
@@ -53,7 +53,7 @@ const SiteForm = ({ initialData, onClose,onSuccess }: SiteFormProps) => {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const res = await api.get("/admin/client");
+        const res = await fetchAllClientsForForm();
         setClients(res.data.data);
       } catch (err) {
         console.error("Failed to fetch clients", err);
@@ -89,8 +89,7 @@ const SiteForm = ({ initialData, onClose,onSuccess }: SiteFormProps) => {
 
       onClose();
     } catch (err) {
-      console.error("Site save failed", err);
-      toast.error("Something went wrong");
+      toast.error(err.response.data.message);
     }
   };
 
@@ -107,8 +106,6 @@ const SiteForm = ({ initialData, onClose,onSuccess }: SiteFormProps) => {
               placeholder="Site Code"
               disabled={isEditMode}
               {...register("siteCode")}
-              // className="w-full px-3 py-2 text-sm border border-gray-300 rounded-full 
-              //   focus:outline-none focus:ring-2 focus:ring-black"
             />
             {errors.siteCode && (
               <p className="text-red-500 text-xs mt-1">{errors.siteCode.message}</p>
@@ -119,8 +116,6 @@ const SiteForm = ({ initialData, onClose,onSuccess }: SiteFormProps) => {
               type="text"
               placeholder="Site Name"
               {...register("siteName")}
-              // className="w-full px-3 py-2 text-sm border border-gray-300 rounded-full 
-              //   focus:outline-none focus:ring-2 focus:ring-black"
             />
             {errors.siteName && (
               <p className="text-red-500 text-xs mt-1">{errors.siteName.message}</p>

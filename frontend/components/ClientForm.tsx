@@ -63,8 +63,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
       reset();
       onClose();
     } catch (error) {
-      console.error("Error submitting form:", error);
-      console.log(error);
+     toast.error(error.response.data.message)
     }
   };
 
@@ -92,17 +91,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
               {...register("clientName")}
               error={errors.clientCode?.message}
             />
-            {/* <input
-              type="text"
-              placeholder="Client Name"
-              {...register("clientName")}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            {errors.clientName && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.clientName.message}
-              </p>
-            )} */}
+
           </div>
         </div>
         <div>
@@ -112,27 +101,11 @@ const ClientForm: React.FC<ClientFormProps> = ({
             {...register("contact")}
             error={errors.clientCode?.message}
           />
-          {/* <input
-            type="text"
-            placeholder="Client Contact"
-            {...register("contact")}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-black"
-          />
-          {errors.contact && (
-            <p className="text-red-500 text-xs mt-1">
-              {errors.contact.message}
-            </p>
-          )} */}
+
         </div>
 
         <div className="flex justify-end gap-3 mt-2">
-          {/* <button
-            type="button"
-            onClick={() => onClose()}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition text-sm"
-          >
-            Cancel
-          </button> */}
+
 
           <Button
             type="button"
@@ -142,13 +115,7 @@ const ClientForm: React.FC<ClientFormProps> = ({
           >
             Cancel
           </Button>
-          {/* <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition text-sm disabled:opacity-50"
-          >
-            {isSubmitting ? "Submitting..." : "Submit"}
-          </button> */}
+
 
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : "Submit"}

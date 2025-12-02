@@ -6,6 +6,7 @@ import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import Input from "./Input";
 
 const LoginForm = () => {
   const router = useRouter();
@@ -65,7 +66,7 @@ const LoginForm = () => {
 
         {/* Password Field */}
         <div className="flex flex-col">
-          <input
+          <Input
             type="password"
             placeholder="Enter your password"
             {...register("password")}

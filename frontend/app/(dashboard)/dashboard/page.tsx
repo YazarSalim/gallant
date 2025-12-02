@@ -1,5 +1,7 @@
 "use client";
 
+import Skeleton from "@/components/Skeleton";
+import TurnAroundExecSummary from "@/components/TurnAroundExecSummary";
 import api from "@/hooks/useAxios";
 import { Categories, KPIs } from "@/utils/kpivaluescategories";
 import { useEffect, useState } from "react";
@@ -48,8 +50,11 @@ const SummaryPage = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [tableData, setTableData] = useState<Record<string, Record<string, number>>>(
+  const [tableData, setTableData] = useState<
+    Record<string, Record<string, number>>
+  >(
     Categories.reduce((acc, cat) => {
       acc[cat] = KPIs.reduce((k, kpi) => {
         k[kpi] = 0;
@@ -70,11 +75,13 @@ const SummaryPage = () => {
         setClients(clientsData);
 
         if (clientsData.length > 0) {
-          const firstClientId = clientsData[0].id;
+          const firstClientId = clientsData[clientsData.length - 1].id;
           setValue("clientId", firstClientId);
 
           // Fetch sites
-          const sitesRes = await api.get<{ data: Site[] }>(`/admin/site/${firstClientId}`);
+          const sitesRes = await api.get<{ data: Site[] }>(
+            `/admin/site/${firstClientId}`
+          );
           const sitesData = sitesRes.data.data;
           setSites(sitesData);
 
@@ -83,7 +90,9 @@ const SummaryPage = () => {
             setValue("siteId", firstSiteId);
 
             // Fetch jobs
-            const jobsRes = await api.get<{ data: Job[] }>(`/admin/job/${firstSiteId}`);
+            const jobsRes = await api.get<{ data: Job[] }>(
+              `/admin/job/site/${firstSiteId}`
+            );
             const jobsData = jobsRes.data.data;
             setJobs(jobsData);
 
@@ -91,13 +100,22 @@ const SummaryPage = () => {
               const firstJobId = jobsData[0].id;
               setValue("jobId", firstJobId);
 
+              const today = new Date();
+              const to = today.toISOString().split("T")[0];
+
+              const lastWeek = new Date();
+              lastWeek.setDate(today.getDate() - 7);
+              const from = lastWeek.toISOString().split("T")[0];
+              setValue("from", from);
+              setValue("to", to);
+
               // Fetch initial summary
               fetchSummary({
                 clientId: firstClientId,
                 siteId: firstSiteId,
                 jobId: firstJobId,
-                from: new Date().toISOString().split("T")[0],
-                to: new Date().toISOString().split("T")[0],
+                from,
+                to,
               });
             }
           }
@@ -109,7 +127,10 @@ const SummaryPage = () => {
 
     const fetchSummary = async (params: FormValues) => {
       try {
-        const res = await api.get<{ data: SummaryItem[] }>("/admin/kpi/kpiSummaryValues", { params });
+        const res = await api.get<{ data: SummaryItem[] }>(
+          "/admin/kpi/kpiSummaryValues",
+          { params }
+        );
         const summary = res.data.data;
 
         const formatted = Categories.reduce((acc, cat) => {
@@ -126,6 +147,8 @@ const SummaryPage = () => {
         setTableData(formatted);
       } catch (error) {
         console.error("Error fetching initial summary:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -133,8 +156,12 @@ const SummaryPage = () => {
   }, [setValue]);
 
   const onSubmit = async (data: FormValues) => {
+    setLoading(true);
     try {
-      const res = await api.get<{ data: SummaryItem[] }>("/admin/kpi/kpiSummaryValues", { params: data });
+      const res = await api.get<{ data: SummaryItem[] }>(
+        "/admin/kpi/kpiSummaryValues",
+        { params: data }
+      );
       const summary = res.data.data;
 
       const formatted = Categories.reduce((acc, cat) => {
@@ -151,6 +178,8 @@ const SummaryPage = () => {
       setTableData(formatted);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,28 +191,40 @@ const SummaryPage = () => {
           <Controller
             control={control}
             name="clientId"
-            render={({ field }) => (
-              <select
-                {...field}
-                className="bg-white rounded-full px-4 py-2 w-[250px]"
-                onChange={async (e) => {
-                  field.onChange(e);
-                  setValue("siteId", "");
-                  setValue("jobId", "");
-                  setSites([]);
-                  setJobs([]);
+            rules={{ required: "Please select a client" }}
+            render={({ field, fieldState }) => (
+              <div className="flex flex-col">
+                <select
+                  {...field}
+                  className="bg-white rounded-full px-4 py-2 w-[250px]"
+                  onChange={async (e) => {
+                    field.onChange(e);
+                    setValue("siteId", "");
+                    setValue("jobId", "");
+                    setSites([]);
+                    setJobs([]);
 
-                  const sitesRes = await api.get<{ data: Site[] }>(`/admin/site/${e.target.value}`);
-                  setSites(sitesRes.data.data);
-                }}
-              >
-                <option value="">Client</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.clientName}
-                  </option>
-                ))}
-              </select>
+                    const sitesRes = await api.get<{ data: Site[] }>(
+                      `/admin/site/${e.target.value}`
+                    );
+                    setSites(sitesRes.data.data);
+                  }}
+                >
+                  <option value="">Client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.clientName}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Display validation error */}
+                {fieldState.error && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {fieldState.error.message}
+                  </span>
+                )}
+              </div>
             )}
           />
 
@@ -191,27 +232,39 @@ const SummaryPage = () => {
           <Controller
             control={control}
             name="siteId"
-            render={({ field }) => (
-              <select
-                {...field}
-                disabled={!selectedClient}
-                className="bg-white rounded-full px-4 py-2 w-[250px]"
-                onChange={async (e) => {
-                  field.onChange(e);
-                  setValue("jobId", "");
-                  setJobs([]);
+            rules={{ required: "Please select a Site" }}
+            render={({ field, fieldState }) => (
+              <div className="flex flex-col">
+                <select
+                  {...field}
+                  disabled={!selectedClient}
+                  className="bg-white rounded-full px-4 py-2 w-[250px]"
+                  onChange={async (e) => {
+                    field.onChange(e);
+                    setValue("jobId", "");
+                    setJobs([]);
 
-                  const jobsRes = await api.get<{ data: Job[] }>(`/admin/job/${e.target.value}`);
-                  setJobs(jobsRes.data.data);
-                }}
-              >
-                <option value="">Site</option>
-                {sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.siteName}
-                  </option>
-                ))}
-              </select>
+                    const jobsRes = await api.get<{ data: Job[] }>(
+                      `/admin/job/site/${e.target.value}`
+                    );
+                    setJobs(jobsRes.data.data);
+                  }}
+                >
+                  <option value="">Site</option>
+                  {sites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.siteName}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Display validation error */}
+                {fieldState.error && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {fieldState.error.message}
+                  </span>
+                )}
+              </div>
             )}
           />
 
@@ -219,19 +272,29 @@ const SummaryPage = () => {
           <Controller
             control={control}
             name="jobId"
-            render={({ field }) => (
-              <select
-                {...field}
-                disabled={!selectedSite}
-                className="bg-white rounded-full px-4 py-2 w-[250px]"
-              >
-                <option value="">Job</option>
-                {jobs.map((j) => (
-                  <option key={j.id} value={j.id}>
-                    {j.jobName}
-                  </option>
-                ))}
-              </select>
+            rules={{ required: "Please select a job" }}
+            render={({ field, fieldState }) => (
+              <div className="flex flex-col">
+                <select
+                  {...field}
+                  disabled={!selectedSite}
+                  className="bg-white rounded-full px-4 py-2 w-[250px]"
+                >
+                  <option value="">Job</option>
+                  {jobs.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.jobName}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Display validation error */}
+                {fieldState.error && (
+                  <span className="text-red-500 text-sm mt-1">
+                    {fieldState.error.message}
+                  </span>
+                )}
+              </div>
             )}
           />
 
@@ -270,37 +333,53 @@ const SummaryPage = () => {
         </div>
 
         {/* SUMMARY TABLE */}
-        <div className="overflow-auto bg-white p-5 rounded-2xl">
-          <table className="border-collapse border-b border-b-gray-100 w-full">
-            <thead>
-              <tr>
-                <th className="p-2">KPI</th>
-                {KPIs.map((kpi) => (
-                  <th key={kpi} className="p-2">
-                    {kpi}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+        <div className="overflow-auto  p-5 rounded-2xl">
+          {loading ? (
+            <Skeleton className="h-10 w-full" count={5} />
+          ) : (
+            <div>
 
-            <tbody>
-              {Categories.map((cat) => (
-                <tr key={cat}>
-                  <td className="border-b border-gray-100 p-2 font-semibold text-[14px] text-gray-600">
-                    {cat}
-                  </td>
-                  {KPIs.map((kpi) => (
-                    <td
-                      key={kpi}
-                      className="border-b border-gray-100 p-2 text-center text-[14px] text-gray-600"
-                    >
-                      {tableData[cat][kpi]}
-                    </td>
+              <div className="bg-white p-3 rounded-2xl">
+              <table className="border-collapse border-b border-b-gray-100 w-full bg-white rounded-2xl">
+                <thead>
+                  <tr>
+                    <th className="p-2">KPI</th>
+                    {KPIs.map((kpi) => (
+                      <th key={kpi} className="p-2">
+                        {kpi}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {Categories.map((cat) => (
+                    <tr key={cat}>
+                      <td className="border-b border-gray-100 p-2 font-semibold text-[14px] text-gray-600">
+                        {cat}
+                      </td>
+                      {KPIs.map((kpi) => (
+                        <td
+                          key={kpi}
+                          className="border-b border-gray-100 p-2 text-center text-[14px] text-gray-600"
+                        >
+                          {tableData[cat][kpi]}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </tbody>
+              </table>
+              </div>
+              <TurnAroundExecSummary
+                clientId={watch("clientId")}
+                siteId={watch("siteId")}
+                jobId={watch("jobId")}
+                startDate={watch("from")}
+                endDate={watch("to")}
+              />
+            </div>
+          )}
         </div>
       </form>
     </div>

@@ -1,9 +1,11 @@
 import express from 'express';
 import controller from './controller.js';
 import auth from '../../../middleware/auth.js';
+import { activityLogger } from '../../../middleware/activityLogger.js';
 
 const router = express.Router();
 
+router.use(auth, activityLogger);
 
 /**
  * @swagger
@@ -61,7 +63,7 @@ const router = express.Router();
  *                   type: string
  *                   example: "Invalid email parameter"
  */
-router.get("/",auth, controller.getUserProfile);
+router.get("/", controller.getUserProfile);
 
-router.put('/updateProfile',auth,controller.updateProfile)
+router.put('/updateProfile',controller.updateProfile)
 export default router;

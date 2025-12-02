@@ -7,6 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
+import Button from "./Button";
 
 interface Client {
   id: number;
@@ -37,7 +38,11 @@ interface FixedEquipmentSummaryFormProps {
     }[];
   } | null;
 }
-
+interface kpiValues {
+      kpiId:number;
+      categoryId:number;
+      value: number;
+    };
 const formSchema = z.object({
   clientId: z.string().nonempty("Client is required"),
   siteId: z.string().nonempty("Site is required"),
@@ -50,6 +55,7 @@ type FormValues = z.infer<typeof formSchema>;
 const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
   setIsOpen,
   editingEntry,
+  onSuccess
 }) => {
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -102,7 +108,7 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
   useEffect(() => {
     if (!selectedSite) return;
     api
-      .get(`/admin/job/${selectedSite}`)
+      .get(`/admin/job/site/${selectedSite}`)
       .then((res) => setJobs(res.data.data))
       .catch(console.error);
   }, [selectedSite]);
@@ -138,7 +144,7 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
   }, [editingEntry, setValue]);
 
   const onSubmit = async (data: FormValues) => {
-    const values = [];
+    const values:kpiValues[] = [];
     Categories.forEach((cat, ci) => {
       KPIs.forEach((kpi, ki) => {
         values.push({
@@ -162,27 +168,28 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
         await api.put(`/admin/kpi/kpi-entry-log/${editingEntry.id}`, payload);
       } else {
         await api.post("/admin/kpi/savevalues", payload);
+
       }
       toast.success("Saved successfully!");
       setIsOpen(false);
-      window.location.reload()
+      onSuccess()
+      // window.location.reload()
     } catch (error) {
-      console.error(error);
-      toast.error("Error saving data");
+      toast.error(error.response.data.error);
     }
   };
 
   return (
     <div className="p-4 relative">
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="flex gap-5 justify-end mb-4">
+        <div className="flex gap-5 justify-evenly mb-4">
           <Controller
             control={control}
             name="clientId"
             render={({ field }) => (
               <select
                 {...field}
-                className="border rounded-full px-3 py-1"
+                className="border rounded-full px-3 py-1 "
                 onChange={(e) => {
                   field.onChange(e);
                   setValue("siteId", "");
@@ -270,12 +277,12 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
         </div>
 
         <div className="overflow-auto">
-          <table className="border-collapse border border-gray-300 w-full">
+          <table className="border-collapse border border-gray-100 w-full">
             <thead>
               <tr>
-                <th className="border p-2">Category / KPI</th>
+                <th className="border border-gray-100 p-2 text-gray-500">KPI</th>
                 {KPIs.map((kpi) => (
-                  <th key={kpi} className="border p-2">
+                  <th key={kpi} className="border border-gray-100 p-2 text-gray-500">
                     {kpi}
                   </th>
                 ))}
@@ -284,18 +291,19 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
             <tbody>
               {Categories.map((cat) => (
                 <tr key={cat}>
-                  <td className="border border-gray-300 p-2 font-semibold">
+                  <td className="border border-gray-100 p-2 font-semibold text-gray-500">
                     {cat}
                   </td>
                   {KPIs.map((kpi) => (
                     <td
                       key={kpi}
-                      className="border border-gray-300 p-1 text-center"
+                      className="border border-gray-100 p-1 text-center text-gray-500"
                     >
                       <input
                         type="number"
                         className="w-16 text-center border-0 outline-0 rounded"
                         value={tableData[cat]?.[kpi] ?? ""}
+                        min={0}
                         onFocus={() => {
                           if (tableData[cat][kpi] === 0)
                             setTableData((prev) => ({
@@ -322,16 +330,15 @@ const FixedEquipmentSummaryForm: React.FC<FixedEquipmentSummaryFormProps> = ({
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <button
+          <Button
             type="submit"
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             Save
-          </button>
+          </Button>
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="bg-gray-200 px-4 py-2 rounded"
+            className=" border px-4 py-2 rounded-full text-black hover:cursor-pointer"
           >
             Cancel
           </button>

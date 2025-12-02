@@ -9,6 +9,7 @@ import deleteIcon from "../../../public/delete.svg";
 import Image from "next/image";
 import Skeleton from "@/components/Skeleton";
 import Pagination from "@/components/Pagination";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface KpiEntry {
   id: number;
@@ -18,30 +19,45 @@ interface KpiEntry {
   job: { id: number; jobName: string };
 }
 
+interface KpiEntryDetail extends KpiEntry {
+  kpiValues: {
+    kpi: { id: number; name: string };
+    category: { id: number; name: string };
+    value: number;
+  }[];
+}
+
 const Page = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<KpiEntry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<KpiEntryDetail | null>(null);
   const [kpiEntries, setKpiEntries] = useState<KpiEntry[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
+  const [filters, setFilters] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const limit = 5;
 
-  const limit = 10;
-
-  const fetchKpiEntries = async (page = 1) => {
+  const fetchKpiEntries = async (currentPage = page) => {
     setLoading(true);
     try {
+      const query = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(limit),
+        search: debouncedSearch,
+        clientId: filters.clientId || "",
+        siteId: filters.siteId || "",
+        jobId: filters.jobId || "",
+        date: filters.date || "",
+      });
       const response = await api.get(
-        `/admin/kpi/getAllKpiEntries?page=${page}&limit=${limit}&search=${
-          searchTerm || ""
-        }&date=${selectedDate || ""}`
+        `/admin/kpi/getAllKpiEntries?${query.toString()}`
       );
 
       setKpiEntries(response.data.data);
       setTotalPages(response.data.pagination.totalPages);
+      setPage(currentPage);
     } catch (error) {
       console.error("Error fetching KPI entries:", error);
     } finally {
@@ -50,15 +66,13 @@ const Page = () => {
   };
 
   useEffect(() => {
-    fetchKpiEntries(page);
-  }, [page, searchTerm, selectedDate]);
+    fetchKpiEntries(1);
+  }, [debouncedSearch, filters]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this entry?")) return;
     try {
-      const res = await api.patch(`/admin/kpi/delete-kpiEntries/${id}`);
-      console.log(res.data);
-
+      await api.patch(`/admin/kpi/delete-kpiEntries/${id}`);
       fetchKpiEntries(page);
     } catch (error) {
       console.error("Error deleting KPI entry:", error);
@@ -87,24 +101,61 @@ const Page = () => {
     }
   };
 
-  return (
-    <div className="p-4 bg-white rounded-3xl">
-      <Header
-        title="Data"
-        icon={icon}
-        onSearch={(value) => setSearchTerm(value)}
-        onAdd={() => {
-          setEditingEntry(null);
-          setIsOpen(true);
-        }}
-        showDateFilter={true}
-        onDateChange={(date) => setSelectedDate(date)} // ⭐ Capture selected date
-      />
+const handleExportExcel = async (filters: any) => {
+  console.log("Export filters:", filters);
 
-      <div className="overflow-auto rounded">
-        {loading ? (
-          <Skeleton className="h-10 w-full" count={limit} />
-        ) : (
+  try {
+    const query = new URLSearchParams({
+      clientId: filters.clientId || "",
+      siteId: filters.siteId || "",
+      jobId: filters.jobId || "",
+      startDate: filters.startDate || "",
+      endDate: filters.endDate || "",
+    });
+
+    // Call backend export API
+    const res = await api.get(
+      `/admin/kpi/exportFixedSummary?${query.toString()}`,
+      { responseType: "blob" } 
+    );
+
+    // Create Blob and download
+    const blob = new Blob([res.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "FixedSummary.xlsx");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    // Revoke the object URL
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Export failed:", err);
+  }
+};
+
+
+  return (
+    <div className="flex flex-col gap-3 justify-evenly">
+      <div className="p-4 bg-white rounded-3xl h-[600px]">
+        <Header
+          title="Data"
+          icon={icon}
+          onSearch={(value) => setSearchTerm(value)}
+          onAdd={() => {
+            setEditingEntry(null);
+            setIsOpen(true);
+          }}
+          onFilter={(f) => setFilters(f)}
+          onExport={handleExportExcel}
+        />
+
+        <div className="overflow-auto rounded">
           <table className="w-full border-collapse text-center">
             <thead>
               <tr>
@@ -115,8 +166,17 @@ const Page = () => {
                 <th className="p-2">Actions</th>
               </tr>
             </thead>
+
             <tbody>
-              {kpiEntries.length === 0 ? (
+              {loading ? (
+                Array.from({ length: limit }).map((_, i) => (
+                  <tr key={i}>
+                    <td colSpan={5}>
+                      <Skeleton className="h-10 w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : kpiEntries.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center p-4">
                     No entries found
@@ -138,6 +198,7 @@ const Page = () => {
                       >
                         <Image src={editIcon} alt="Edit" className="w-3 h-3" />
                       </button>
+
                       <button
                         className="p-3 rounded-full border border-gray-300"
                         onClick={() => handleDelete(entry.id)}
@@ -154,53 +215,29 @@ const Page = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Modal */}
+        {isOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20">
+            <div className="bg-white rounded-lg p-6 w-[90%] max-w-4xl relative">
+              <FixedEquipmentSummaryForm
+                setIsOpen={setIsOpen}
+                editingEntry={editingEntry}
+                onSuccess={fetchKpiEntries}
+              />
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {/* <div className="flex justify-center gap-2 mt-4">
-        <button
-          disabled={page <= 1}
-          onClick={() => setPage(page - 1)}
-          className="px-3 py-1 disabled:opacity-50"
-        >
-          {"<"}
-        </button>
-        <span className="px-3 py-1 bg-black text-white rounded-full">
-          {page}
-        </span>
-        <button
-          disabled={page >= totalPages}
-          onClick={() => setPage(page + 1)}
-          className="px-3 py-1 disabled:opacity-50"
-        >
-          {">"}
-        </button>
-      </div> */}
-
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onPageChange={(newPage) => fetchKpiEntries(newPage)}
-      />
-
-      {/* Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20">
-          <div className="bg-white rounded-lg p-6 w-[90%] max-w-4xl relative">
-            <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
-              onClick={() => setIsOpen(false)}
-            >
-              ✕
-            </button>
-            <FixedEquipmentSummaryForm
-              setIsOpen={setIsOpen}
-              editingEntry={editingEntry}
-            />
-          </div>
-        </div>
-      )}
+      <div className="bg-white flex justify-end p-3 rounded-3xl">
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(newPage) => fetchKpiEntries(newPage)}
+        />
+      </div>
     </div>
   );
 };

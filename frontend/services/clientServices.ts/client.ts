@@ -19,3 +19,5 @@ export const updateClient = ( id:string,data:ClientFormValues) =>
 
 export const createClient = (data:ClientFormValues) =>
   api.post("/admin/client/createclient", data);
+
+export const fetchAllClientsForForm=()=> api.get("/admin/client")

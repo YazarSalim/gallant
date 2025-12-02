@@ -9,6 +9,8 @@ import toast from "react-hot-toast";
 import Input from "./Input";
 import { Client, Site } from "@/types/types";
 import { createJob, updateJob } from "@/services/jobServices/jobs";
+import { fetchAllClientsForForm } from "@/services/clientServices.ts/client";
+import { fetchSitesBySelectedClient } from "@/services/siteServices/site";
 
 const jobSchema = z.object({
   jobName: z.string().min(1, "Job name is required"),
@@ -53,7 +55,7 @@ const JobForm = ({ initialData, onClose, onSuccess }: JobFormProps) => {
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const res = await api.get("/admin/client");
+        const res = await fetchAllClientsForForm();
         setClients(res.data.data);
       } catch (err) {
         console.error("Failed to fetch clients", err);
@@ -69,7 +71,7 @@ const JobForm = ({ initialData, onClose, onSuccess }: JobFormProps) => {
 
     const fetchSites = async () => {
       try {
-        const res = await api.get(`/admin/site/${selectedClientId}`);
+        const res = await fetchSitesBySelectedClient(selectedClientId);
         setSites(res.data.data);
       } catch (err) {
         console.error("Failed to fetch sites", err);
@@ -145,11 +147,7 @@ const JobForm = ({ initialData, onClose, onSuccess }: JobFormProps) => {
               {...register("jobCode")}
               disabled={isEditMode}
               error={errors.jobCode?.message}
-              // className="w-full px-3 py-2 text-sm border border-gray-300 rounded-full focus:ring-black focus:outline-none"
             />
-            {/* {errors.jobCode && (
-              <p className="text-red-500 text-xs">{errors.jobCode.message}</p>
-            )} */}
           </div>
 
           <div>

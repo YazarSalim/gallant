@@ -12,6 +12,9 @@ const pageTitles: Record<string, string> = {
   "/jobs": "Jobs",
   "/fixedequipmentsummary": "Fixed Equipment Summary",
   "/profile": "Profile",
+  "/users":"Users",
+  "/activitylog":"Activity Log",
+  "/turnaroundexecution":"Turn Around Execution"
 };
 
 const ProfileHeader = () => {

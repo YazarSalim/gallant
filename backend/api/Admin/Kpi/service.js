@@ -1,223 +1,358 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../../models/index.js";
 
 const getKpiValuesService = async ({ clientId, siteId, jobId, entryDate }) => {
-  const values = await prisma.kpiValue.findMany({
-    where: {
-      clientId,
-      siteId,
-      jobId,
-      entryDate: new Date(entryDate),
-    },
-    include: {
-      kpi: true,
-      category: true,
-    },
-  });
+  try {
+    const values = await prisma.kpiValue.findMany({
+      where: {
+        clientId,
+        siteId,
+        jobId,
+        entryDate: new Date(entryDate),
+      },
+      include: {
+        kpi: true,
+        category: true,
+      },
+    });
 
-  return values;
+    return values;
+  } catch (error) {
+    throw new Error(error.message);
+  }
 };
 
-const saveKpiValuesService = async ({
+ const saveKpiValuesService = async ({
   clientId,
   siteId,
   jobId,
+  userId,
   entryDate,
   values,
 }) => {
-  const date = new Date(entryDate);
+  try {
+    const date = new Date(entryDate);
 
-  const operations = values.map((item) =>
-    prisma.kpiValue.create({
+    // Prepare all create operations for KPI values
+    const kpiValueOperations = values.map((item) =>
+      prisma.kpiValue.create({
+        data: {
+          entryDate: date,
+          value: item.value,
+          client: { connect: { id: clientId } },
+          site: { connect: { id: siteId } },
+          job: { connect: { id: jobId } },
+          kpi: { connect: { id: item.kpiId } },
+          category: { connect: { id: item.categoryId } },
+        },
+      })
+    );
+
+    // Create the KPI entry log
+    const kpiEntryLogOperation = prisma.kpiEntryLog.create({
       data: {
+        entryDate: date,
+        client: { connect: { id: clientId } },
+        site: { connect: { id: siteId } },
+        job: { connect: { id: jobId } },
+        user: { connect: { id: userId } },
+      },
+    });
+
+    // Execute all operations in a transaction
+    await prisma.$transaction([...kpiValueOperations, kpiEntryLogOperation]);
+
+    return { success: true };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new Error(
+        "KPI values for this client, site, job, and date already exist"
+      );
+    }
+    throw new Error(error.message);
+  }
+};
+
+
+const summaryKpiValuesService = async ({ clientId, siteId, jobId, from, to }) => {
+  try {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    const grouped = await prisma.kpiValue.groupBy({
+      by: ["kpiId", "categoryId"],
+      where: {
         clientId,
         siteId,
         jobId,
-        kpiId: item.kpiId,
-        categoryId: item.categoryId,
-        entryDate: date,
-        value: item.value,
+        entryDate: {
+          gte: fromDate,
+          lte: toDate,
+        },
       },
-    })
-  );
+      _sum: { value: true },
+    });
 
-  operations.push(
-    prisma.kpiEntryLog.create({
-      data: {
-        clientId,
-        siteId,
-        jobId,
-        entryDate: date,
-      },
-    })
-  );
+    const kpis = await prisma.kpi.findMany();
+    const categories = await prisma.category.findMany();
 
-  await prisma.$transaction(operations);
+    const kpiMap = Object.fromEntries(kpis.map((k) => [k.id, k.name]));
+    const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 
-  return { success: true };
+    return grouped.map((g) => ({
+      kpiId: g.kpiId,
+      categoryId: g.categoryId,
+      total: g._sum.value,
+      kpiName: kpiMap[g.kpiId],
+      categoryName: categoryMap[g.categoryId],
+    }));
+  } catch (error) {
+    throw new Error(error.message);
+  }
 };
 
-const summaryKpiValuesService = async ({
-  clientId,
-  siteId,
-  jobId,
-  from,
-  to,
-}) => {
-  const fromDate = new Date(from);
-  const toDate = new Date(to);
+// const getKpiEntryLogsService = async ({ page = 1, limit = 10, search = "", date }) => {
+//   try {
+//     const skip = (page - 1) * limit;
 
-  const grouped = await prisma.kpiValue.groupBy({
-    by: ["kpiId", "categoryId"],
-    where: {
-      clientId,
-      siteId,
-      jobId,
-      entryDate: {
-        gte: fromDate,
-        lte: toDate,
-      },
-    },
-    _sum: { value: true },
-  });
-  const kpis = await prisma.kpi.findMany();
-  const categories = await prisma.category.findMany();
+//     let dateFilter = {};
+//     if (date) {
+//       const selectedDate = new Date(date);
+//       const nextDay = new Date(selectedDate);
+//       nextDay.setDate(nextDay.getDate() + 1);
 
-  const kpiMap = Object.fromEntries(kpis.map((k) => [k.id, k.name]));
-  const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+//       dateFilter = {
+//         entryDate: {
+//           gte: selectedDate,
+//           lt: nextDay,
+//         },
+//       };
+//     }
 
-  return grouped.map((g) => ({
-    kpiId: g.kpiId,
-    categoryId: g.categoryId,
-    total: g._sum.value,
-    kpiName: kpiMap[g.kpiId],
-    categoryName: categoryMap[g.categoryId],
-  }));
-};
+//     const searchFilter = search
+//       ? {
+//           OR: [
+//             { client: { clientName: { contains: search, mode: "insensitive" } } },
+//             { site: { siteName: { contains: search, mode: "insensitive" } } },
+//             { job: { jobName: { contains: search, mode: "insensitive" } } },
+//           ],
+//         }
+//       : {};
 
- const getKpiEntryLogsService = async ({
+//     const whereCondition = {
+//       isDeleted: false,
+//       ...dateFilter,
+//       ...searchFilter,
+//     };
+
+//     const totalCount = await prisma.kpiEntryLog.count({ where: whereCondition });
+
+//     const logs = await prisma.kpiEntryLog.findMany({
+//       skip,
+//       take: Number(limit),
+//       orderBy: { entryDate: "desc" },
+//       where: whereCondition,
+//       include: {
+//         client: true,
+//         site: true,
+//         job: true,
+//       },
+//     });
+
+//     return {
+//       data: logs,
+//       pagination: {
+//         total: totalCount,
+//         page: Number(page),
+//         limit: Number(limit),
+//         totalPages: Math.ceil(totalCount / limit),
+//       },
+//     };
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// };
+
+const getKpiEntryLogsService = async ({
   page = 1,
   limit = 10,
   search = "",
-  date
+  date,
+  clientId,
+  siteId,
+  jobId,
+  sortField = "id",       // default sort column
+  sortOrder = "desc",     // ASC or DESC
 }) => {
-  const skip = (page - 1) * limit;
+  try {
+    const skip = (page - 1) * limit;
+    const take = Number(limit);
 
-  // Build date filter ONLY if a date is provided
-  let dateFilter = {};
-  if (date) {
-    const selectedDate = new Date(date);
+    // --- Build WHERE conditions dynamically ---
+    const where = {
+      isDeleted: false,
+      AND: [
+        // Text search
+        search
+          ? {
+              OR: [
+                {
+                  client: {
+                    clientName: { contains: search, mode: "insensitive" },
+                  },
+                },
+                {
+                  site: {
+                    siteName: { contains: search, mode: "insensitive" },
+                  },
+                },
+                {
+                  job: {
+                    jobName: { contains: search, mode: "insensitive" },
+                  },
+                },
+              ],
+            }
+          : {},
 
-    // Filter only by that calendar day
-    const nextDay = new Date(selectedDate);
-    nextDay.setDate(nextDay.getDate() + 1);
+        // Date filter
+        date
+          ? {
+              entryDate: {
+                gte: new Date(date + "T00:00:00.000Z"),
+                lte: new Date(date + "T23:59:59.999Z"),
+              },
+            }
+          : {},
 
-    dateFilter = {
-      entryDate: {
-        gte: selectedDate,
-        lt: nextDay, // covers full day
+        // Client filter
+        clientId ? { clientId: Number(clientId) } : {},
+
+        // Site filter
+        siteId ? { siteId: Number(siteId) } : {},
+
+        // Job filter
+        jobId ? { jobId: Number(jobId) } : {},
+      ],
+    };
+
+    // --- Build sorting dynamically ---
+    const orderBy = {};
+    orderBy[sortField] =
+      sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+
+    // --- Fetch logs ---
+    const logs = await prisma.kpiEntryLog.findMany({
+      where,
+      skip,
+      take,
+      orderBy,
+      include: {
+        client: true,
+        site: true,
+        job: true,
+      },
+    });
+
+    // --- Total count ---
+    const total = await prisma.kpiEntryLog.count({ where });
+
+    return {
+      data: logs,
+      pagination: {
+        total: total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit),
       },
     };
+  } catch (error) {
+    throw new Error(error.message || "Failed to fetch KPI Entry Logs");
   }
-
-  // Search filter by related table names
-  const searchFilter = search
-    ? {
-        OR: [
-          { client: { clientName: { contains: search, mode: "insensitive" } } },
-          { site: { siteName: { contains: search, mode: "insensitive" } } },
-          { job: { jobName: { contains: search, mode: "insensitive" } } },
-        ],
-      }
-    : {};
-
-  // Final condition
-  const whereCondition = {
-    isDeleted: false,
-    ...dateFilter,
-    ...searchFilter,
-  };
-
-  // Count total matching results
-  const totalCount = await prisma.kpiEntryLog.count({
-    where: whereCondition,
-  });
-
-  // Fetch paginated results
-  const logs = await prisma.kpiEntryLog.findMany({
-    skip,
-    take: Number(limit),
-    orderBy: { entryDate: "desc" },
-    where: whereCondition,
-    include: {
-      client: true,
-      site: true,
-      job: true,
-    },
-  });
-
-  return {
-    data: logs,
-    pagination: {
-      total: totalCount,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(totalCount / limit),
-    },
-  };
 };
 
+const updateKpiValuesService = async (payload) => {
+  try {
+    const { clientId, siteId, jobId, entryDate, values } = payload;
 
- const updateKpiValuesService = async (payload) => {
-  const { clientId, siteId, jobId, entryDate, values } = payload;
+    if (!clientId || !siteId || !jobId || !entryDate || !Array.isArray(values)) {
+      throw new Error("Invalid payload");
+    }
 
-  if (!clientId || !siteId || !jobId || !entryDate || !Array.isArray(values)) {
-    throw new Error("Invalid payload");
-  }
+    const entryDateObj = new Date(entryDate);
+    if (isNaN(entryDateObj.getTime())) throw new Error("Invalid entryDate format");
 
-  // Convert plain date string → proper Date object
-  const entryDateObj = new Date(entryDate);
+    await prisma.kpiValue.deleteMany({
+      where: {
+        clientId: Number(clientId),
+        siteId: Number(siteId),
+        jobId: Number(jobId),
+        entryDate: entryDateObj,
+      },
+    });
 
-  if (isNaN(entryDateObj.getTime())) {
-    throw new Error("Invalid entryDate format");
-  }
-
-  // Delete existing KPI values for this exact date
-  await prisma.kpiValue.deleteMany({
-    where: {
+    const newValues = values.map((v) => ({
+      ...v,
       clientId: Number(clientId),
       siteId: Number(siteId),
       jobId: Number(jobId),
-      entryDate: entryDateObj,  // VERY IMPORTANT
+      entryDate: entryDateObj,
+    }));
+
+    return prisma.kpiValue.createMany({ data: newValues });
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const deleteKpiEntryService = async (id) => {
+  try {
+    return prisma.kpiEntryLog.update({
+      where: { id: Number(id) },
+      data: { isDeleted: true },
+    });
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
+const getFixedSummaryByDateRangeService = async ({
+  clientId,
+  siteId,
+  jobId,
+  startDate,
+  endDate,
+}) => {
+  return await prisma.kpiEntryLog.findMany({
+    where: {
+      entryDate: {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      },
+      isDeleted: false,
+      clientId: clientId ? Number(clientId) : undefined,
+      siteId: siteId ? Number(siteId) : undefined,
+      jobId: jobId ? Number(jobId) : undefined,
     },
-  });
-
-  // Prepare new KPI values
-  const newValues = values.map((v) => ({
-    ...v,
-    clientId: Number(clientId),
-    siteId: Number(siteId),
-    jobId: Number(jobId),
-    entryDate: entryDateObj, 
-  }));
-
-  // Insert
-  return prisma.kpiValue.createMany({
-    data: newValues,
+    include: {
+      client: { select: { clientName: true } },
+      site: { select: { siteName: true } },
+      job: { select: { jobName: true } },
+    },
+    orderBy: { entryDate: "desc" },
   });
 };
 
-
- const deleteKpiEntryService = async (id) => {
-  return prisma.kpiEntryLog.update({
-    where: { id:Number(id) },
-    data: { isDeleted: true },
-  });
-};
 export default {
   saveKpiValuesService,
   getKpiValuesService,
   summaryKpiValuesService,
   getKpiEntryLogsService,
   updateKpiValuesService,
-  deleteKpiEntryService
+  deleteKpiEntryService,
+  getFixedSummaryByDateRangeService
 };

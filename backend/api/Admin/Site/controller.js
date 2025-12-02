@@ -2,32 +2,54 @@ import service from "./service.js";
 
 const createSite = async (req, res) => {
   try {
-    const data = await service.createSiteService(req.body);
-    res.json({ success: true, data, message: "New Site Created Successfully" });
+    const site = await service.createSiteService(req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: "New Site created successfully",
+      data: site,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
 const updateSite = async (req, res) => {
   try {
     const id = req.params.id;
-    const data = await service.updateSiteService(id, req.body);
-    res.json({ success: true, data, message: "Site Updated Successfully" });
+    const updatedSite = await service.updateSiteService(id, req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Site updated successfully",
+      data: updatedSite,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
 const deleteSite = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(id);
 
-    const data = await service.deleteSiteService(id);
-    res.json({ success: true, data, message: "Site Deleted Successfully" });
+    const deletedSite = await service.deleteSiteService(id);
+    return res.status(200).json({
+      success: true,
+      message: "Site deleted successfully",
+      data: deletedSite,
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 const getAllSites = async (req, res) => {
@@ -58,24 +80,29 @@ const getAllSites = async (req, res) => {
 
 
 const getSitesByClient = async (req, res) => {
-
   try {
     const clientId = Number(req.params.clientId);
 
-    const data = await service.getSitesByClientService(clientId);
-    
+    const sites = await service.getSitesByClientService(clientId);
 
-    res.json({ success: true, data });
+    return res.status(200).json({
+      success: true,
+      message: "Sites fetched successfully",
+      data: sites || [],
+    });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
+
+
 
 const getSitesById = async (req, res) => {
   try {
     const { id } = req.params;
-    // console.log(id);
-
     const site = await service.getSiteByIdService(id);
 
     if (!site) {

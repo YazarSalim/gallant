@@ -232,7 +232,56 @@ router.get("/", auth, controller.getAllJobs);
 
 /**
  * @swagger
- * /api/admin/job/{siteId}:
+ * /api/admin/job/jobById/{id}:
+ *   get:
+ *     summary: Get job by ID
+ *     tags:
+ *       - Admin/Job Management
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Job ID
+ *     responses:
+ *       200:
+ *         description: Job details fetched successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     jobName:
+ *                       type: string
+ *                     jobCode:
+ *                       type: string
+ *                     siteId:
+ *                       type: string
+ *       400:
+ *         description: Invalid Job ID
+ *       401:
+ *         description: Unauthorized — Token missing or invalid
+ *       404:
+ *         description: Job not found
+ *       500:
+ *         description: Internal server error
+ */
+
+router.get("/jobById/:id",auth,controller.getJobById)
+
+/**
+ * @swagger
+ * /api/admin/job/site/{siteId}:
  *   get:
  *     summary: Get all jobs under a specific site
  *     tags:
@@ -280,6 +329,8 @@ router.get("/", auth, controller.getAllJobs);
  *       500:
  *         description: Internal server error
  */
-router.get("/:siteId", auth, controller.getJobsBySite);
+router.get("/site/:siteId", auth, controller.getJobsBySite);
+
+
 
 export default router;

@@ -1,11 +1,13 @@
 import express from 'express';
 import controller from './controller.js';
 import auth from '../../../middleware/auth.js';
+import { activityLogger } from '../../../middleware/activityLogger.js';
 
 const router = express.Router();
 
+router.use(auth, activityLogger);
 
-router.post('/savevalues',auth, controller.saveKpiValuesController)
+router.post('/savevalues', controller.saveKpiValuesController)
 /**
  * @swagger
  * /api/admin/kpi/getAllKpiEntries:
@@ -87,7 +89,7 @@ router.post('/savevalues',auth, controller.saveKpiValuesController)
  *                   type: string
  *                   example: "No KPI entries found"
  */
-router.get('/getAllKpiEntries',auth, controller.getKpiEntryLogs);
+router.get('/getAllKpiEntries', controller.getKpiEntryLogs);
 
 /**
  * @swagger
@@ -169,7 +171,7 @@ router.get('/getAllKpiEntries',auth, controller.getKpiEntryLogs);
  *                   type: string
  *                   example: "Missing required query parameters"
  */
-router.get('/kpiSummaryValues',auth, controller.summaryKpiValuesController);
+router.get('/kpiSummaryValues', controller.summaryKpiValuesController);
 
 /**
  * @swagger
@@ -241,10 +243,10 @@ router.get('/kpiSummaryValues',auth, controller.summaryKpiValuesController);
  *                   type: string
  *                   example: "Missing required query parameters"
  */
-router.get('/getKpiValuesById',auth, controller.getKpiValuesController);
+router.get('/getKpiValuesById', controller.getKpiValuesController);
 
 
-router.put("/kpi-entry-log/:entryId",auth, controller.updateKpiValuesController);
+router.put("/kpi-entry-log/:entryId", controller.updateKpiValuesController);
 /**
  * @swagger
  * /api/admin/kpi/delete-kpiEntries/{id}:
@@ -301,6 +303,8 @@ router.put("/kpi-entry-log/:entryId",auth, controller.updateKpiValuesController)
  *                   type: string
  *                   example: "Invalid ID parameter"
  */
-router.patch("/delete-kpiEntries/:id",auth, controller.deleteKpiEntry);
+router.patch("/delete-kpiEntries/:id", controller.deleteKpiEntry);
 
+
+router.get("/exportFixedSummary",auth,controller.exportFixedSummary)
 export default router;

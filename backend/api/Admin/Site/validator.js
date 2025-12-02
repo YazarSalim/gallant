@@ -1,5 +1,5 @@
 import Joi from 'joi'
-async function validateCreateSite(req, res, next) {
+async function validateSite(req, res, next) {
   try {
     const schema = Joi.object({
       siteCode: Joi.string().trim().required().messages({
@@ -23,4 +23,4 @@ async function validateCreateSite(req, res, next) {
   }
 }
 
-export default {validateCreateSite}
+export default {validateSite}

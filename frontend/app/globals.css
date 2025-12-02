@@ -29,12 +29,14 @@ body {
 }
 
 
-.my-pagination .pagination__item {
-  border-radius: 50%;
-  padding: 8px 12px;
+/* Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-.my-pagination .pagination__item--active {
-  background-color: black;
-  color: white;
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
 }

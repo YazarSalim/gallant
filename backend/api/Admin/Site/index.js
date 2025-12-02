@@ -2,9 +2,13 @@ import express from "express";
 import controller from "./controller.js";
 import validator from "./validator.js";
 import auth from "../../../middleware/auth.js";
+import { activityLogger } from "../../../middleware/activityLogger.js";
 
 const router = express.Router();
 
+
+
+router.use(auth, activityLogger);
 /**
  * @swagger
  * /api/admin/site/createsite:
@@ -38,7 +42,7 @@ const router = express.Router();
  *      201:
  *        description: Site created successfully
  */
-router.post("/createsite",auth,validator.validateCreateSite, controller.createSite);
+router.post("/createsite",validator.validateSite, controller.createSite);
 
 /**
  * @swagger
@@ -65,7 +69,7 @@ router.post("/createsite",auth,validator.validateCreateSite, controller.createSi
  *        200:
  *          description: Site updated successfully
  */
-router.put("/updatesite/:id",auth, controller.updateSite);
+router.put("/updatesite/:id",validator.validateSite, controller.updateSite);
 
 /**
  * @swagger
@@ -86,7 +90,7 @@ router.put("/updatesite/:id",auth, controller.updateSite);
  *        200:
  *          description: Site deleted successfully
  */
-router.patch("/deletesite/:id",auth, controller.deleteSite);
+router.patch("/deletesite/:id", controller.deleteSite);
 /**
  * @swagger
  * /api/admin/site:
@@ -148,7 +152,7 @@ router.patch("/deletesite/:id",auth, controller.deleteSite);
  *       500:
  *         description: Internal server error
  */
-router.get("/allSites",auth,controller.getAllSites)
+router.get("/allSites",controller.getAllSites)
 
 /**
  * @swagger
@@ -205,7 +209,7 @@ router.get("/allSites",auth,controller.getAllSites)
  *                   type: string
  *                   example: "Site not found"
  */
-router.get("/getSiteById/:id",auth, controller.getSitesById);
+router.get("/getSiteById/:id", controller.getSitesById);
 
 
 /**
@@ -265,7 +269,7 @@ router.get("/getSiteById/:id",auth, controller.getSitesById);
  *                   type: string
  *                   example: "No sites found for this client"
  */
-router.get("/:clientId",auth, controller.getSitesByClient);
+router.get("/:clientId", controller.getSitesByClient);
 
 
 export default router;

@@ -45,4 +45,22 @@ const resetPassword = async (req, res) => {
   }
 };
 
-export default { login, forgotPassword, resetPassword };
+ const setPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    console.log(password);
+    
+
+    const result = await authService.setPasswordService(email, password);
+
+    return res.json({ success: true, message: result.message });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Something went wrong",
+    });
+  }
+};
+
+
+export default { login, forgotPassword, resetPassword ,setPassword};

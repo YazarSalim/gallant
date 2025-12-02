@@ -1,5 +1,3 @@
-
-
 generator client {
   provider = "prisma-client-js"
   // output   = "../generated/prisma"
@@ -11,13 +9,19 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String
-  email     String   @unique
-  password  String
-  resetToken  String?  // nullable
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                         Int                        @id @default(autoincrement())
+  username                   String
+  email                      String                     @unique
+  phone                      String
+  role                       String
+  password                   String
+  resetToken                 String? // nullable
+  isDeleted                  Boolean                    @default(false)
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+  kpiEntryLogs               KpiEntryLog[]
+  activityLogs               ActivityLog[]
+  turnAroundExecutionEntries TurnAroundExecutionEntry[]
 }
 
 model Client {
@@ -29,10 +33,11 @@ model Client {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now())
 
-  sites        Site[]
-  jobs         Job[]
-  kpiValues    KpiValue[]
-  kpiEntryLogs KpiEntryLog[]
+  sites                      Site[]
+  jobs                       Job[]
+  kpiValues                  KpiValue[]
+  kpiEntryLogs               KpiEntryLog[]
+  turnAroundExecutionEntries TurnAroundExecutionEntry[]
 }
 
 model Site {
@@ -43,11 +48,12 @@ model Site {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  clientId     Int
-  client       Client        @relation(fields: [clientId], references: [id])
-  jobs         Job[]
-  kpiValues    KpiValue[]
-  kpiEntryLogs KpiEntryLog[]
+  clientId                   Int
+  client                     Client                     @relation(fields: [clientId], references: [id])
+  jobs                       Job[]
+  kpiValues                  KpiValue[]
+  kpiEntryLogs               KpiEntryLog[]
+  turnAroundExecutionEntries TurnAroundExecutionEntry[]
 }
 
 model Job {
@@ -61,10 +67,11 @@ model Job {
   clientId Int
   client   Client @relation(fields: [clientId], references: [id])
 
-  siteId       Int
-  site         Site          @relation(fields: [siteId], references: [id])
-  kpiValues    KpiValue[]
-  kpiEntryLogs KpiEntryLog[]
+  siteId                     Int
+  site                       Site                       @relation(fields: [siteId], references: [id])
+  kpiValues                  KpiValue[]
+  kpiEntryLogs               KpiEntryLog[]
+  turnAroundExecutionEntries TurnAroundExecutionEntry[]
 }
 
 model Kpi {
@@ -117,13 +124,63 @@ model KpiEntryLog {
   clientId  Int
   siteId    Int
   jobId     Int
-  isDeleted Boolean    @default(false)
+  userId    Int
+  isDeleted Boolean  @default(false)
   entryDate DateTime
   createdAt DateTime @default(now())
 
   client Client @relation(fields: [clientId], references: [id])
   site   Site   @relation(fields: [siteId], references: [id])
   job    Job    @relation(fields: [jobId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   @@unique([clientId, siteId, jobId, entryDate])
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model TurnAroundExecutionEntry {
+  id        Int      @id @default(autoincrement())
+  clientId  Int
+  siteId    Int
+  jobId     Int
+  userId    Int
+  entryDate DateTime
+
+  client Client @relation(fields: [clientId], references: [id])
+  site   Site   @relation(fields: [siteId], references: [id])
+  job    Job    @relation(fields: [jobId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  directEarned    DirectEarned[]
+  percentComplete PercentComplete[]
+
+  createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
+}
+
+model DirectEarned {
+  id      Int    @id @default(autoincrement())
+  entryId Int
+  label   String
+  value   Float?
+
+  entry TurnAroundExecutionEntry @relation(fields: [entryId], references: [id])
+}
+
+model PercentComplete {
+  id      Int    @id @default(autoincrement())
+  entryId Int
+  label   String
+  value   Float?
+
+  entry TurnAroundExecutionEntry @relation(fields: [entryId], references: [id])
 }

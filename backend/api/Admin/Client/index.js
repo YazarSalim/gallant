@@ -2,9 +2,10 @@ import express from 'express';
 import validator from './validator.js';
 import controller from './controller.js';
 import auth from '../../../middleware/auth.js';
+import { activityLogger } from '../../../middleware/activityLogger.js';
 const router = express.Router();
 
-
+router.use(auth, activityLogger);
 /**
  * @swagger
  * /api/admin/client/createclient:
@@ -54,7 +55,7 @@ const router = express.Router();
  */
 
 
-router.post('/createclient',auth,validator.validateCreateClient,controller.createClient)
+router.post('/createclient',validator.validateClient,controller.createClient)
 
 
 /**
@@ -107,7 +108,7 @@ router.post('/createclient',auth,validator.validateCreateClient,controller.creat
  *         description: Internal server error
  */
 
-router.put("/updateclient/:id",auth,controller.editClient)
+router.put("/updateclient/:id",validator.validateClient,controller.editClient)
 
 /**
  * @swagger
@@ -126,7 +127,7 @@ router.put("/updateclient/:id",auth,controller.editClient)
  *       200:
  *         description: Client deleted successfully
  */
-router.delete('/deleteclient/:id',auth, controller.deleteClient);
+router.delete('/deleteclient/:id', controller.deleteClient);
 
 
 /**
@@ -201,7 +202,7 @@ router.delete('/deleteclient/:id',auth, controller.deleteClient);
  *       500:
  *         description: Internal server error
  */
-router.get("/",auth,controller.getAllClients)
+router.get("/",controller.getAllClients)
 
 /**
  * @swagger
@@ -245,6 +246,6 @@ router.get("/",auth,controller.getAllClients)
  *         description: Server error
  */
 
-router.get("/getClientById/:id",auth,controller.getClientById)
+router.get("/getClientById/:id",controller.getClientById)
 
 export default router;
