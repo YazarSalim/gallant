@@ -2,6 +2,7 @@ import express from 'express';
 import controller from './controller.js';
 import auth from '../../../middleware/auth.js';
 import { activityLogger } from '../../../middleware/activityLogger.js';
+import uploadProfile from '../../../middleware/uploadProfile.js';
 
 const router = express.Router();
 
@@ -65,5 +66,5 @@ router.use(auth, activityLogger);
  */
 router.get("/", controller.getUserProfile);
 
-router.put('/updateProfile',controller.updateProfile)
+router.put('/updateProfile',auth,uploadProfile.single("profilePhoto"),controller.updateProfile)
 export default router;

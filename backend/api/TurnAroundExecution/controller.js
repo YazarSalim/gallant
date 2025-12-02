@@ -1,11 +1,10 @@
 import service from "./service.js";
 import ExcelJS from "exceljs";
 
-
 const createTurnAroundExecution = async (req, res) => {
   try {
-    const id =req.user.id;
-    const result = await service.createTurnAroundExecutionService(id,req.body);
+    const id = req.user.id;
+    const result = await service.createTurnAroundExecutionService(id, req.body);
     res.json({ success: true, data: result, message: "Successfully Created" });
   } catch (error) {
     res.json({ success: false, message: error.message });
@@ -14,16 +13,28 @@ const createTurnAroundExecution = async (req, res) => {
 
 const getAllTurnAroundExecutionEntries = async (req, res) => {
   try {
-    // console.log(req.query);
-    
-    const { page = 1, limit = 10, search = "", date,clientId,siteId,jobId } = req.query; // <-- Use query params
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      date,
+      clientId,
+      siteId,
+      jobId,
+      sortField,
+      sortOrder,
+    } = req.query;
 
     const result = await service.getAllTurnAroundExecutionEntriesService({
       page: Number(page),
       limit: Number(limit),
       search,
       date,
-      clientId,siteId,jobId
+      clientId,
+      siteId,
+      jobId,
+      sortField,
+      sortOrder,
     });
 
     res.json({ success: true, result });
@@ -32,7 +43,6 @@ const getAllTurnAroundExecutionEntries = async (req, res) => {
   }
 };
 
-// ------------------ GET BY ID (EDIT) ------------------
 const getTurnAroundExecutionById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -45,11 +55,14 @@ const getTurnAroundExecutionById = async (req, res) => {
   }
 };
 
- const updateTurnAroundExecution = async (req, res) => {
+const updateTurnAroundExecution = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updated = await service.updateTurnAroundExecutionService(id, req.body);
+    const updated = await service.updateTurnAroundExecutionService(
+      id,
+      req.body
+    );
 
     res.json({
       success: true,
@@ -61,7 +74,7 @@ const getTurnAroundExecutionById = async (req, res) => {
   }
 };
 
- const deleteTurnAroundExecution = async (req, res) => {
+const deleteTurnAroundExecution = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -97,7 +110,6 @@ const getTurnAroundExecutionSummary = async (req, res) => {
       message: "Turnaround execution records fetched successfully",
       data,
     });
-
   } catch (error) {
     console.error("Error in getTurnAroundExecutionByDateRange:", error);
     return res.status(500).json({
@@ -107,13 +119,10 @@ const getTurnAroundExecutionSummary = async (req, res) => {
   }
 };
 
-
-
 const exportTurnAroundExecution = async (req, res) => {
   try {
     const { clientId, siteId, jobId, startDate, endDate } = req.query;
 
-    // Validate required date range
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
@@ -121,7 +130,6 @@ const exportTurnAroundExecution = async (req, res) => {
       });
     }
 
-    // Limit max 1 year
     const start = new Date(startDate);
     const end = new Date(endDate);
     const diffInDays = (end - start) / (1000 * 60 * 60 * 24);
@@ -154,34 +162,31 @@ const exportTurnAroundExecution = async (req, res) => {
     const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
     const sheet = workbook.addWorksheet("TurnAround Report");
 
-    sheet.addRow([
-      "ID",
-      "Client Name",
-      "Site Name",
-      "Job Name",
-      "Entry Date",
-    ]).commit();
+    sheet
+      .addRow(["ID", "Client Name", "Site Name", "Job Name", "Entry Date"])
+      .commit();
 
     results.forEach((row) => {
-      sheet.addRow([
-        row.id,
-        row.client?.clientName || "",
-        row.site?.siteName || "",
-        row.job?.jobName || "",
-        row.entryDate?.toISOString().split("T")[0] || "",
-      ]).commit();
+      sheet
+        .addRow([
+          row.id,
+          row.client?.clientName || "",
+          row.site?.siteName || "",
+          row.job?.jobName || "",
+          row.entryDate?.toISOString().split("T")[0] || "",
+        ])
+        .commit();
     });
 
     sheet.commit();
     await workbook.commit();
   } catch (err) {
     console.error("Excel Export Error:", err);
-    if (!res.headersSent) res.status(500).json({ success: false, message: err.message });
+    if (!res.headersSent)
+      res.status(500).json({ success: false, message: err.message });
     else res.end();
   }
 };
-
-
 
 export default {
   createTurnAroundExecution,
@@ -190,5 +195,5 @@ export default {
   updateTurnAroundExecution,
   deleteTurnAroundExecution,
   getTurnAroundExecutionSummary,
-  exportTurnAroundExecution
+  exportTurnAroundExecution,
 };

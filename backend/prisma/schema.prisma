@@ -15,6 +15,7 @@ model User {
   phone                      String
   role                       String
   password                   String
+  profilePhoto               String?
   resetToken                 String? // nullable
   isDeleted                  Boolean                    @default(false)
   createdAt                  DateTime                   @default(now())

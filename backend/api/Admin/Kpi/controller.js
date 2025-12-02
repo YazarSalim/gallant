@@ -88,17 +88,55 @@ const summaryKpiValuesController = async (req, res) => {
   }
 };
 
+// const getKpiEntryLogs = async (req, res) => {
+//   try {
+//     const { page, limit, search, date, clientId, siteId, jobId } = req.query;
+//     const result = await service.getKpiEntryLogsService({
+//       page,
+//       limit,
+//       search,
+//       date,
+//       clientId,
+//       siteId,
+//       jobId,
+//     });
+
+//     res.json({
+//       success: true,
+//       data: result.data,
+//       pagination: result.pagination,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
+
 const getKpiEntryLogs = async (req, res) => {
   try {
-    const { page, limit, search, date, clientId, siteId, jobId } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      date,
+      clientId,
+      siteId,
+      jobId,
+      sortField = "id",
+      sortOrder = "desc",
+    } = req.query;
+
     const result = await service.getKpiEntryLogsService({
-      page,
-      limit,
+      page: Number(page),
+      limit: Number(limit),
       search,
       date,
       clientId,
       siteId,
       jobId,
+      sortField,
+      sortOrder,
     });
 
     res.json({
@@ -107,7 +145,7 @@ const getKpiEntryLogs = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
-    console.error(error);
+    console.error("KPI Entry Logs Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

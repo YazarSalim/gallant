@@ -48,7 +48,6 @@ const getKpiValuesService = async ({ clientId, siteId, jobId, entryDate }) => {
       })
     );
 
-    // Create the KPI entry log
     const kpiEntryLogOperation = prisma.kpiEntryLog.create({
       data: {
         entryDate: date,
@@ -59,7 +58,6 @@ const getKpiValuesService = async ({ clientId, siteId, jobId, entryDate }) => {
       },
     });
 
-    // Execute all operations in a transaction
     await prisma.$transaction([...kpiValueOperations, kpiEntryLogOperation]);
 
     return { success: true };
@@ -114,67 +112,6 @@ const summaryKpiValuesService = async ({ clientId, siteId, jobId, from, to }) =>
   }
 };
 
-// const getKpiEntryLogsService = async ({ page = 1, limit = 10, search = "", date }) => {
-//   try {
-//     const skip = (page - 1) * limit;
-
-//     let dateFilter = {};
-//     if (date) {
-//       const selectedDate = new Date(date);
-//       const nextDay = new Date(selectedDate);
-//       nextDay.setDate(nextDay.getDate() + 1);
-
-//       dateFilter = {
-//         entryDate: {
-//           gte: selectedDate,
-//           lt: nextDay,
-//         },
-//       };
-//     }
-
-//     const searchFilter = search
-//       ? {
-//           OR: [
-//             { client: { clientName: { contains: search, mode: "insensitive" } } },
-//             { site: { siteName: { contains: search, mode: "insensitive" } } },
-//             { job: { jobName: { contains: search, mode: "insensitive" } } },
-//           ],
-//         }
-//       : {};
-
-//     const whereCondition = {
-//       isDeleted: false,
-//       ...dateFilter,
-//       ...searchFilter,
-//     };
-
-//     const totalCount = await prisma.kpiEntryLog.count({ where: whereCondition });
-
-//     const logs = await prisma.kpiEntryLog.findMany({
-//       skip,
-//       take: Number(limit),
-//       orderBy: { entryDate: "desc" },
-//       where: whereCondition,
-//       include: {
-//         client: true,
-//         site: true,
-//         job: true,
-//       },
-//     });
-
-//     return {
-//       data: logs,
-//       pagination: {
-//         total: totalCount,
-//         page: Number(page),
-//         limit: Number(limit),
-//         totalPages: Math.ceil(totalCount / limit),
-//       },
-//     };
-//   } catch (error) {
-//     throw new Error(error.message);
-//   }
-// };
 
 const getKpiEntryLogsService = async ({
   page = 1,
@@ -184,8 +121,8 @@ const getKpiEntryLogsService = async ({
   clientId,
   siteId,
   jobId,
-  sortField = "id",       // default sort column
-  sortOrder = "desc",     // ASC or DESC
+  sortField = "id",
+  sortOrder = "desc",
 }) => {
   try {
     const skip = (page - 1) * limit;
@@ -195,30 +132,15 @@ const getKpiEntryLogsService = async ({
     const where = {
       isDeleted: false,
       AND: [
-        // Text search
         search
           ? {
               OR: [
-                {
-                  client: {
-                    clientName: { contains: search, mode: "insensitive" },
-                  },
-                },
-                {
-                  site: {
-                    siteName: { contains: search, mode: "insensitive" },
-                  },
-                },
-                {
-                  job: {
-                    jobName: { contains: search, mode: "insensitive" },
-                  },
-                },
+                { client: { clientName: { contains: search, mode: "insensitive" } } },
+                { site: { siteName: { contains: search, mode: "insensitive" } } },
+                { job: { jobName: { contains: search, mode: "insensitive" } } },
               ],
             }
           : {},
-
-        // Date filter
         date
           ? {
               entryDate: {
@@ -227,24 +149,23 @@ const getKpiEntryLogsService = async ({
               },
             }
           : {},
-
-        // Client filter
         clientId ? { clientId: Number(clientId) } : {},
-
-        // Site filter
         siteId ? { siteId: Number(siteId) } : {},
-
-        // Job filter
         jobId ? { jobId: Number(jobId) } : {},
       ],
     };
 
-    // --- Build sorting dynamically ---
-    const orderBy = {};
-    orderBy[sortField] =
-      sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+    // --- Build dynamic ORDER BY ---
+    let orderBy = {};
+    if (["clientName", "siteName", "jobName"].includes(sortField)) {
+      if (sortField === "clientName") orderBy = { client: { clientName: sortOrder } };
+      if (sortField === "siteName") orderBy = { site: { siteName: sortOrder } };
+      if (sortField === "jobName") orderBy = { job: { jobName: sortOrder } };
+    } else {
+      orderBy[sortField] = sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+    }
 
-    // --- Fetch logs ---
+    // --- Fetch data ---
     const logs = await prisma.kpiEntryLog.findMany({
       where,
       skip,
@@ -263,13 +184,14 @@ const getKpiEntryLogsService = async ({
     return {
       data: logs,
       pagination: {
-        total: total,
+        total,
         page: Number(page),
         limit: Number(limit),
         totalPages: Math.ceil(total / limit),
       },
     };
   } catch (error) {
+    console.error("Service Error:", error);
     throw new Error(error.message || "Failed to fetch KPI Entry Logs");
   }
 };

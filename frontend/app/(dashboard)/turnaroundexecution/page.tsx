@@ -18,28 +18,38 @@ import {
   TurnAroundExecutionListResponse,
 } from "@/types/turnaround";
 import ConfirmDeleteModal from "@/components/DeleteModal";
+import toast from "react-hot-toast";
 
 const TurnAroundExecutionPage = () => {
+
   const [isOpen, setIsOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<any>({});
   const [editingEntry, setEditingEntry] = useState<TurnAroundExecutionEntry | null>(null);
-
   const [limit] = useState(6);
   const [loading, setLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTurnAroundExecutionId, setDeleteTurnAroundExecutionId] =
-    useState<number | null>(null);
+  const [deleteTurnAroundExecutionId, setDeleteTurnAroundExecutionId] = useState<number | null>(null);
 
-  const [turnAroundEntries, setTurnAroundEntries] = useState<
-    TurnAroundExecutionEntry[]
-  >([]);
+  const [turnAroundEntries, setTurnAroundEntries] = useState<TurnAroundExecutionEntry[]>([]);
+
+  // 🔥 SORTING
+  const [sortField, setSortField] = useState("entryDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const debouncedSearch = useDebounce(searchTerm, 500);
 
+  // Sorting handler
+  const handleSort = (field: string, order: "asc" | "desc") => {
+    setSortField(field);
+    setSortOrder(order);
+  };
+
+  // Fetch Entries
   const fetchAllTurnAroundExecutionEntries = async (currentPage = page) => {
+    setLoading(true)
     try {
       const query = new URLSearchParams({
         page: String(currentPage),
@@ -49,16 +59,13 @@ const TurnAroundExecutionPage = () => {
         siteId: filters.siteId || "",
         jobId: filters.jobId || "",
         date: filters.date || "",
+        sortField,
+        sortOrder,
       });
-
-      // console.log(query.toString());
-      
 
       const res = await api.get<{ result: TurnAroundExecutionListResponse }>(
         `/turnaroudexecution/getAllTurnAroundExecutionEntries?${query.toString()}`
       );
-      // console.log(res.data);
-      
 
       setTurnAroundEntries(res.data.result.entries);
       setTotalPages(res.data.result.totalPages);
@@ -74,8 +81,7 @@ const TurnAroundExecutionPage = () => {
     const response = await api.get<{ data: TurnAroundExecutionEntry }>(
       `/turnaroudexecution/getTurnAroundExecutionById/${id}`
     );
-   
-    
+
     setEditingEntry(response.data.data);
     setIsOpen(true);
   };
@@ -88,10 +94,7 @@ const TurnAroundExecutionPage = () => {
     setDeleteModalOpen(false);
   };
 
-
 const handleExportExcel = async (filters: any) => {
-  console.log("Export filters:", filters);
-
   try {
     const query = new URLSearchParams({
       clientId: filters.clientId || "",
@@ -101,13 +104,13 @@ const handleExportExcel = async (filters: any) => {
       endDate: filters.endDate || "",
     });
 
-    // Call backend export API
     const res = await api.get(
       `/turnaroudexecution/exportTurnAroundExecution?${query.toString()}`,
-      { responseType: "blob" } // important!
+      { responseType: "blob" }
     );
 
-    // Create Blob and download
+    toast.success("Excel export started!");
+
     const blob = new Blob([res.data], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
@@ -120,21 +123,21 @@ const handleExportExcel = async (filters: any) => {
     link.click();
     link.remove();
 
-    // Revoke the object URL
     window.URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Export failed:", err);
+    toast.error("Excel export failed. Try again!");
   }
 };
 
 
   useEffect(() => {
     fetchAllTurnAroundExecutionEntries(1);
-  }, [debouncedSearch, filters]);
+  }, [debouncedSearch, filters, sortField, sortOrder]);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="p-6">
+      <div className="p-6 bg-white rounded-2xl">
         <Header
           title="Turn Around Execution"
           onSearch={setSearchTerm}
@@ -143,20 +146,133 @@ const handleExportExcel = async (filters: any) => {
             setIsOpen(true);
           }}
           onFilter={(f) => setFilters(f)}
-          onExport={handleExportExcel}  
+          onExport={handleExportExcel}
         />
 
         {loading ? (
           <Skeleton className="h-10 w-full" count={limit} />
         ) : (
-          <div className="overflow-x-auto mt-6 bg-white rounded-xl shadow-md">
-            <table className="min-w-full text-left border-collapse">
-              <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
+          <div className="overflow-x-auto mt-6  p-10">
+            <table className="min-w-full text-left border-collapse ">
+              <thead className=" text-gray-700 sticky top-0 z-10">
                 <tr>
-                  <th className="p-4 text-sm font-semibold">Date</th>
-                  <th className="p-4 text-sm font-semibold">Client Name</th>
-                  <th className="p-4 text-sm font-semibold">Site Name</th>
-                  <th className="p-4 text-sm font-semibold">Job Name</th>
+                  
+                  {/* DATE */}
+                  <th className="p-4 text-sm font-semibold">
+                    <div className="flex items-center gap-1">
+                      Date
+                      <div className="flex flex-col">
+                        <button
+                          className={
+                            sortField === "entryDate" && sortOrder === "asc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("entryDate", "asc")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          className={
+                            sortField === "entryDate" && sortOrder === "desc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("entryDate", "desc")}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+
+                  {/* CLIENT NAME */}
+                  <th className="p-4 text-sm font-semibold">
+                    <div className="flex items-center gap-1">
+                      Client Name
+                      <div className="flex flex-col">
+                        <button
+                          className={
+                            sortField === "clientName" && sortOrder === "asc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("clientName", "asc")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          className={
+                            sortField === "clientName" && sortOrder === "desc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("clientName", "desc")}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+
+                  {/* SITE */}
+                  <th className="p-4 text-sm font-semibold">
+                    <div className="flex items-center gap-1">
+                      Site Name
+                      <div className="flex flex-col">
+                        <button
+                          className={
+                            sortField === "siteName" && sortOrder === "asc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("siteName", "asc")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          className={
+                            sortField === "siteName" && sortOrder === "desc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("siteName", "desc")}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+
+                  {/* JOB */}
+                  <th className="p-4 text-sm font-semibold">
+                    <div className="flex items-center gap-1">
+                      Job Name
+                      <div className="flex flex-col">
+                        <button
+                          className={
+                            sortField === "jobName" && sortOrder === "asc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("jobName", "asc")}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          className={
+                            sortField === "jobName" && sortOrder === "desc"
+                              ? "font-bold"
+                              : "text-gray-500"
+                          }
+                          onClick={() => handleSort("jobName", "desc")}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+
                   <th className="p-4 text-sm font-semibold w-32">Actions</th>
                 </tr>
               </thead>
@@ -238,6 +354,7 @@ const handleExportExcel = async (filters: any) => {
           onPageChange={(newPage) => fetchAllTurnAroundExecutionEntries(newPage)}
         />
       </div>
+
     </div>
   );
 };

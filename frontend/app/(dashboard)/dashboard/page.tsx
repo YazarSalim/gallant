@@ -338,38 +338,37 @@ const SummaryPage = () => {
             <Skeleton className="h-10 w-full" count={5} />
           ) : (
             <div>
-
               <div className="bg-white p-3 rounded-2xl">
-              <table className="border-collapse border-b border-b-gray-100 w-full bg-white rounded-2xl">
-                <thead>
-                  <tr>
-                    <th className="p-2">KPI</th>
-                    {KPIs.map((kpi) => (
-                      <th key={kpi} className="p-2">
-                        {kpi}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {Categories.map((cat) => (
-                    <tr key={cat}>
-                      <td className="border-b border-gray-100 p-2 font-semibold text-[14px] text-gray-600">
-                        {cat}
-                      </td>
+                <table className="border-collapse border-b border-b-gray-100 w-full bg-white rounded-2xl">
+                  <thead>
+                    <tr>
+                      <th className="p-2">KPI</th>
                       {KPIs.map((kpi) => (
-                        <td
-                          key={kpi}
-                          className="border-b border-gray-100 p-2 text-center text-[14px] text-gray-600"
-                        >
-                          {tableData[cat][kpi]}
-                        </td>
+                        <th key={kpi} className="p-2">
+                          {kpi}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+
+                  <tbody>
+                    {Categories.map((cat) => (
+                      <tr key={cat}>
+                        <td className="border-b border-gray-100 p-2 font-semibold text-[14px] text-gray-600">
+                          {cat}
+                        </td>
+                        {KPIs.map((kpi) => (
+                          <td
+                            key={kpi}
+                            className="border-b border-gray-100 p-2 text-center text-[14px] text-gray-600"
+                          >
+                            {tableData[cat][kpi]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <TurnAroundExecSummary
                 clientId={watch("clientId")}

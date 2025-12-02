@@ -28,9 +28,33 @@ const getUserProfile = async (req, res) => {
 };
 
 
+// const updateProfile = async (req, res) => {
+//   try {
+//     const userId = req.user?.id;
+//     const updatedUser = await service.updateProfileService(userId, req.body);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Profile updated successfully",
+//       data: updatedUser,
+//     });
+//   } catch (error) {
+//     return res.status(500).json({
+//       success: false,
+//       message: error.message || "Internal server error",
+//     });
+//   }
+// };
+
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user?.id;
+
+    // If a file is uploaded, attach photo URL
+    if (req.file) {
+      req.body.profilePhoto = `http://localhost:5001/uploads/profile/${req.file.filename}`;
+    }
+
     const updatedUser = await service.updateProfileService(userId, req.body);
 
     return res.status(200).json({

@@ -10,6 +10,7 @@ import Image from "next/image";
 import Skeleton from "@/components/Skeleton";
 import Pagination from "@/components/Pagination";
 import { useDebounce } from "@/hooks/useDebounce";
+import toast from "react-hot-toast";
 
 interface KpiEntry {
   id: number;
@@ -35,9 +36,13 @@ const Page = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
   const debouncedSearch = useDebounce(searchTerm, 500);
   const limit = 5;
+  const [loading, setLoading] = useState(true);
+
+  // ⭐ Sorting state
+  const [sortField, setSortField] = useState("entryDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const fetchKpiEntries = async (currentPage = page) => {
     setLoading(true);
@@ -50,7 +55,10 @@ const Page = () => {
         siteId: filters.siteId || "",
         jobId: filters.jobId || "",
         date: filters.date || "",
+        sortField,
+        sortOrder,
       });
+
       const response = await api.get(
         `/admin/kpi/getAllKpiEntries?${query.toString()}`
       );
@@ -67,10 +75,15 @@ const Page = () => {
 
   useEffect(() => {
     fetchKpiEntries(1);
-  }, [debouncedSearch, filters]);
+  }, [debouncedSearch, filters, sortField, sortOrder]);
+
+  const handleSort = (field: string, order: "asc" | "desc") => {
+    setSortField(field);
+    setSortOrder(order);
+  };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this entry?")) return;
+    if (!confirm("Delete this entry?")) return;
     try {
       await api.patch(`/admin/kpi/delete-kpiEntries/${id}`);
       fetchKpiEntries(page);
@@ -90,58 +103,50 @@ const Page = () => {
           entryDate,
         },
       });
-      const entryWithValues = {
+
+      setEditingEntry({
         ...entry,
         kpiValues: response.data.data,
-      };
-      setEditingEntry(entryWithValues);
+      });
       setIsOpen(true);
-    } catch (error) {
-      console.error("Error fetching KPI entry details:", error);
+    } catch (err) {
+      console.error("Error fetching KPI detail:", err);
     }
   };
 
-const handleExportExcel = async (filters: any) => {
-  console.log("Export filters:", filters);
+  const handleExportExcel = async (filters: any) => {
+    try {
+      const query = new URLSearchParams({
+        clientId: filters.clientId || "",
+        siteId: filters.siteId || "",
+        jobId: filters.jobId || "",
+        startDate: filters.startDate || "",
+        endDate: filters.endDate || "",
+      });
 
-  try {
-    const query = new URLSearchParams({
-      clientId: filters.clientId || "",
-      siteId: filters.siteId || "",
-      jobId: filters.jobId || "",
-      startDate: filters.startDate || "",
-      endDate: filters.endDate || "",
-    });
+      const res = await api.get(
+        `/admin/kpi/exportFixedSummary?${query.toString()}`,
+        { responseType: "blob" }
+      );
+      toast.success("Excel export started")
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
 
-    // Call backend export API
-    const res = await api.get(
-      `/admin/kpi/exportFixedSummary?${query.toString()}`,
-      { responseType: "blob" } 
-    );
-
-    // Create Blob and download
-    const blob = new Blob([res.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = window.URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "FixedSummary.xlsx");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    // Revoke the object URL
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error("Export failed:", err);
-  }
-};
-
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "FixedSummary.xlsx";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Excel export failed:", err);
+      toast.success("Excel export failed")
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-3 justify-evenly">
+    <div className="flex flex-col gap-3">
       <div className="p-4 bg-white rounded-3xl h-[600px]">
         <Header
           title="Data"
@@ -159,10 +164,90 @@ const handleExportExcel = async (filters: any) => {
           <table className="w-full border-collapse text-center">
             <thead>
               <tr>
-                <th className="p-2">Date</th>
-                <th className="p-2">Client</th>
-                <th className="p-2">Site</th>
-                <th className="p-2">Job</th>
+                {/* DATE SORT */}
+                <th className="p-2">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Date</span>
+                    <div className="flex flex-col text-[10px]">
+                      <button
+                        className={sortField === "entryDate" && sortOrder === "asc" ? "font-bold" : ""}
+                        onClick={() => handleSort("entryDate", "asc")}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={sortField === "entryDate" && sortOrder === "desc" ? "font-bold" : ""}
+                        onClick={() => handleSort("entryDate", "desc")}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
+                {/* CLIENT SORT */}
+                <th className="p-2">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Client</span>
+                    <div className="flex flex-col text-[10px]">
+                      <button
+                        className={sortField === "clientName" && sortOrder === "asc" ? "font-bold" : ""}
+                        onClick={() => handleSort("clientName", "asc")}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={sortField === "clientName" && sortOrder === "desc" ? "font-bold" : ""}
+                        onClick={() => handleSort("clientName", "desc")}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
+                {/* SITE SORT */}
+                <th className="p-2">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Site</span>
+                    <div className="flex flex-col text-[10px]">
+                      <button
+                        className={sortField === "siteName" && sortOrder === "asc" ? "font-bold" : ""}
+                        onClick={() => handleSort("siteName", "asc")}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={sortField === "siteName" && sortOrder === "desc" ? "font-bold" : ""}
+                        onClick={() => handleSort("siteName", "desc")}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
+                {/* JOB SORT */}
+                <th className="p-2">
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Job</span>
+                    <div className="flex flex-col text-[10px]">
+                      <button
+                        className={sortField === "jobName" && sortOrder === "asc" ? "font-bold" : ""}
+                        onClick={() => handleSort("jobName", "asc")}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        className={sortField === "jobName" && sortOrder === "desc" ? "font-bold" : ""}
+                        onClick={() => handleSort("jobName", "desc")}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </th>
+
                 <th className="p-2">Actions</th>
               </tr>
             </thead>
@@ -178,7 +263,7 @@ const handleExportExcel = async (filters: any) => {
                 ))
               ) : kpiEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center p-4">
+                  <td colSpan={5} className="p-4">
                     No entries found
                   </td>
                 </tr>
@@ -193,21 +278,16 @@ const handleExportExcel = async (filters: any) => {
                     <td className="p-2">{entry.job.jobName}</td>
                     <td className="p-2 flex gap-2 justify-center">
                       <button
-                        className="p-3 rounded-full border border-gray-300"
+                        className="p-3 rounded-full border"
                         onClick={() => handleEdit(entry)}
                       >
                         <Image src={editIcon} alt="Edit" className="w-3 h-3" />
                       </button>
-
                       <button
-                        className="p-3 rounded-full border border-gray-300"
+                        className="p-3 rounded-full border"
                         onClick={() => handleDelete(entry.id)}
                       >
-                        <Image
-                          src={deleteIcon}
-                          alt="Delete"
-                          className="w-3 h-3"
-                        />
+                        <Image src={deleteIcon} alt="Delete" className="w-3 h-3" />
                       </button>
                     </td>
                   </tr>
@@ -217,10 +297,9 @@ const handleExportExcel = async (filters: any) => {
           </table>
         </div>
 
-        {/* Modal */}
         {isOpen && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/20">
-            <div className="bg-white rounded-lg p-6 w-[90%] max-w-4xl relative">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/20 z-50">
+            <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl">
               <FixedEquipmentSummaryForm
                 setIsOpen={setIsOpen}
                 editingEntry={editingEntry}
@@ -231,7 +310,7 @@ const handleExportExcel = async (filters: any) => {
         )}
       </div>
 
-      <div className="bg-white flex justify-end p-3 rounded-3xl">
+      <div className="bg-white p-3 rounded-3xl flex justify-end">
         <Pagination
           page={page}
           totalPages={totalPages}

@@ -41,7 +41,7 @@ const Header = ({
           {onFilter && (
             <button
               onClick={() => setShowFilter((prev) => !prev)}
-              className="px-4 py-2 bg-gray-200 rounded-full text-sm font-semibold"
+              className="px-8 py-2 bg-black text-white rounded-full text-sm font-semibold"
             >
               Filter
             </button>
@@ -82,8 +82,22 @@ const Header = ({
 
       {/* FILTER DROPDOWN */}
       {showFilter && (
-        <div className="absolute right-20 top-[85px] bg-white shadow-xl p-5 rounded-lg z-50 border">
-          <FilterForm
+
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
+          <div className="bg-white w-[450px] p-6 rounded-xl shadow-lg">
+            <h2 className="text-lg font-semibold mb-4">
+              Export Excel – Select Filters
+            </h2>
+
+            {/* <FilterForm
+              mode="range" 
+              onFilter={(filters) => {
+                onExport?.(filters);
+                setShowExportModal(false);
+              }}
+            /> */}
+
+            <FilterForm
             onFilter={(filters) => {
               onFilter?.(filters);
               setShowFilter(false);
@@ -91,13 +105,25 @@ const Header = ({
             mode="single"
           />
 
-          <button
+            {/* CLOSE BUTTON */}
+            <button
               onClick={() => setShowFilter(false)}
               className="mt-3 w-full border py-2 rounded-full"
             >
               Close
             </button>
+          </div>
         </div>
+        // <div className="absolute  top-[85px] bg-white shadow-xl p-5 rounded-lg z-50 border">
+          
+
+        //   <button
+        //       onClick={() => setShowFilter(false)}
+        //       className="mt-3 w-full border py-2 rounded-full"
+        //     >
+        //       Close
+        //     </button>
+        // </div>
       )}
 
       {/* EXPORT MODAL */}
